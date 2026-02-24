@@ -6,6 +6,7 @@ import {
   type DragCancelEvent,
   type DragEndEvent,
   type DragOverEvent,
+  DragOverlay,
   type DragStartEvent,
   PointerSensor,
   useSensor,
@@ -66,6 +67,15 @@ const getCardDropTarget = (
   return null;
 };
 
+const getPreviewGapIndex = (cardIds: string[], overCardId?: string) => {
+  if (!overCardId) {
+    return cardIds.length;
+  }
+
+  const index = cardIds.indexOf(overCardId);
+  return index === -1 ? cardIds.length : index;
+};
+
 export const BoardPage = () => {
   const {
     board,
@@ -86,7 +96,12 @@ export const BoardPage = () => {
   const [activeCommentCardId, setActiveCommentCardId] = useState<string | null>(
     null,
   );
-  const activeCardListIdRef = useRef<string | null>(null);
+  const [activeDragCardId, setActiveDragCardId] = useState<string | null>(null);
+  const [cardDragPreview, setCardDragPreview] = useState<{
+    toListId: string;
+    overCardId?: string;
+  } | null>(null);
+  const activeCardSourceListIdRef = useRef<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -103,51 +118,53 @@ export const BoardPage = () => {
     return cardsById[activeCommentCardId] ?? null;
   }, [activeCommentCardId, cardsById]);
 
+  const activeDragCard = useMemo(() => {
+    if (!activeDragCardId) {
+      return null;
+    }
+    return cardsById[activeDragCardId] ?? null;
+  }, [activeDragCardId, cardsById]);
+
   const handleDragStart = ({ active }: DragStartEvent) => {
     const activeType = active.data.current?.type as string | undefined;
 
     if (activeType === "card") {
-      const listId = String(active.data.current?.listId ?? "");
-      activeCardListIdRef.current = listId || null;
+      setActiveDragCardId(String(active.id));
+      const sourceListId = String(active.data.current?.listId ?? "");
+      activeCardSourceListIdRef.current = sourceListId || null;
       return;
     }
 
-    activeCardListIdRef.current = null;
+    setActiveDragCardId(null);
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
   };
 
   const handleDragOver = ({ active, over }: DragOverEvent) => {
-    if (!over) {
-      return;
-    }
-
-    const activeType = active.data.current?.type as string | undefined;
-    if (activeType !== "card") {
-      return;
-    }
-
-    const cardId = String(active.id);
-    const fromListId =
-      activeCardListIdRef.current ?? String(active.data.current?.listId ?? "");
-    if (!fromListId) {
+    if (!activeDragCardId || String(active.id) !== activeDragCardId) {
       return;
     }
 
     const target = getCardDropTarget(over);
-    if (!target || !target.toListId) {
-      return;
-    }
-
-    if (target.toListId === fromListId) {
-      return;
-    }
-
-    moveCard(cardId, fromListId, target.toListId, target.overCardId);
-    activeCardListIdRef.current = target.toListId;
+    setCardDragPreview((previous) => {
+      if (!target) {
+        return previous ? null : previous;
+      }
+      if (
+        previous?.toListId === target.toListId &&
+        previous.overCardId === target.overCardId
+      ) {
+        return previous;
+      }
+      return target;
+    });
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) {
-      activeCardListIdRef.current = null;
+      setActiveDragCardId(null);
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
@@ -158,35 +175,48 @@ export const BoardPage = () => {
       if (active.id !== over.id) {
         reorderLists(String(active.id), String(over.id));
       }
-      activeCardListIdRef.current = null;
+      setActiveDragCardId(null);
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    if (activeType !== "card") {
-      activeCardListIdRef.current = null;
+    const draggedCardId = activeDragCardId ?? String(active.id ?? "");
+    if (!draggedCardId) {
+      setActiveDragCardId(null);
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    const cardId = String(active.id);
     const fromListId =
-      activeCardListIdRef.current ?? String(active.data.current?.listId ?? "");
+      activeCardSourceListIdRef.current ??
+      String(active.data.current?.listId ?? "");
     if (!fromListId) {
-      activeCardListIdRef.current = null;
+      setActiveDragCardId(null);
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
     const target = getCardDropTarget(over);
     if (!target || !target.toListId) {
-      activeCardListIdRef.current = null;
+      setActiveDragCardId(null);
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    moveCard(cardId, fromListId, target.toListId, target.overCardId);
-    activeCardListIdRef.current = null;
+    moveCard(draggedCardId, fromListId, target.toListId, target.overCardId);
+    setActiveDragCardId(null);
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
   };
 
   const handleDragCancel = (_event: DragCancelEvent) => {
-    activeCardListIdRef.current = null;
+    setActiveDragCardId(null);
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
   };
 
   if (!isHydrated) {
@@ -210,25 +240,51 @@ export const BoardPage = () => {
           strategy={horizontalListSortingStrategy}
         >
           <section className={styles.listsLane}>
-            {lists.map((list) => (
-              <ListColumn
-                cards={list.cardIds
-                  .map((cardId) => cardsById[cardId])
-                  .filter(Boolean)}
-                key={list.id}
-                list={list}
-                onAddCard={addCard}
-                onOpenComments={setActiveCommentCardId}
-                onRemove={removeList}
-                onUpdateCardTitle={updateCardTitle}
-                onUpdateTitle={updateListTitle}
-              />
-            ))}
+            {lists.map((list) => {
+              const sortableCardIds = activeDragCardId
+                ? list.cardIds.filter((cardId) => cardId !== activeDragCardId)
+                : list.cardIds;
+
+              const previewGapIndex =
+                cardDragPreview?.toListId === list.id
+                  ? getPreviewGapIndex(
+                      sortableCardIds,
+                      cardDragPreview.overCardId,
+                    )
+                  : undefined;
+
+              return (
+                <ListColumn
+                  cards={sortableCardIds
+                    .map((cardId) => cardsById[cardId])
+                    .filter(Boolean)}
+                  key={list.id}
+                  list={list}
+                  onAddCard={addCard}
+                  onOpenComments={setActiveCommentCardId}
+                  onRemove={removeList}
+                  onUpdateCardTitle={updateCardTitle}
+                  onUpdateTitle={updateListTitle}
+                  previewGapIndex={previewGapIndex}
+                  sortableCardIds={sortableCardIds}
+                />
+              );
+            })}
             <div className={styles.addList}>
               <CreateListForm onCreate={addList} />
             </div>
           </section>
         </SortableContext>
+        <DragOverlay>
+          {activeDragCard ? (
+            <article className={styles.cardOverlay}>
+              <p className={styles.cardOverlayTitle}>{activeDragCard.title}</p>
+              <p className={styles.cardOverlayMeta}>
+                Comments ({activeDragCard.comments.length})
+              </p>
+            </article>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <CommentsModal

@@ -33,6 +33,30 @@
   color: $text-on-dark;
 }
 
+.cardOverlay {
+  width: 15rem;
+  border-radius: 0.2rem;
+  padding: 0.5rem;
+  background-color: $card-background;
+  box-shadow: $shadow-soft;
+  pointer-events: none;
+  transform: rotate(2deg);
+}
+
+.cardOverlayTitle {
+  margin: 0;
+  color: #40424b;
+  font-size: 0.875rem;
+  word-break: break-word;
+}
+
+.cardOverlayMeta {
+  margin: 0.55rem 0 0;
+  color: $text-secondary;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
 @media (max-width: 768px) {
   .listsLane {
     padding-bottom: 0.6rem;

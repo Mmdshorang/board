@@ -7,6 +7,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import type { ReactNode } from "react";
 
 import type { BoardCard, BoardList } from "@/types/board";
 
@@ -18,6 +19,8 @@ import styles from "./list-column.module.scss";
 interface ListColumnProps {
   list: BoardList;
   cards: BoardCard[];
+  sortableCardIds: string[];
+  previewGapIndex?: number;
   onRemove: (listId: string) => void;
   onUpdateTitle: (listId: string, title: string) => void;
   onAddCard: (listId: string, title: string) => void;
@@ -28,6 +31,8 @@ interface ListColumnProps {
 export const ListColumn = ({
   list,
   cards,
+  sortableCardIds,
+  previewGapIndex,
   onRemove,
   onUpdateTitle,
   onAddCard,
@@ -59,6 +64,33 @@ export const ListColumn = ({
       listId: list.id,
     },
   });
+
+  const cardItems = cards.flatMap((card, index) => {
+    const nodes: ReactNode[] = [];
+    if (previewGapIndex === index) {
+      nodes.push(
+        <li aria-hidden className={styles.dropGap} key={`gap-${list.id}`} />,
+      );
+    }
+
+    nodes.push(
+      <CardItem
+        card={card}
+        key={card.id}
+        listId={list.id}
+        onOpenComments={onOpenComments}
+        onUpdateTitle={onUpdateCardTitle}
+      />,
+    );
+
+    return nodes;
+  });
+
+  if (previewGapIndex === cards.length) {
+    cardItems.push(
+      <li aria-hidden className={styles.dropGap} key={`gap-${list.id}`} />,
+    );
+  }
 
   return (
     <section
@@ -98,19 +130,11 @@ export const ListColumn = ({
       </header>
 
       <SortableContext
-        items={list.cardIds}
+        items={sortableCardIds}
         strategy={verticalListSortingStrategy}
       >
         <ul className={styles.cards} data-over={isOver} ref={setDropzoneRef}>
-          {cards.map((card) => (
-            <CardItem
-              card={card}
-              key={card.id}
-              listId={list.id}
-              onOpenComments={onOpenComments}
-              onUpdateTitle={onUpdateCardTitle}
-            />
-          ))}
+          {cardItems}
         </ul>
       </SortableContext>
 
