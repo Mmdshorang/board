@@ -5,6 +5,7 @@ import {
   DndContext,
   type DragCancelEvent,
   type DragEndEvent,
+  type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
@@ -25,7 +26,9 @@ import { CommentsModal } from "./comments-modal";
 import { CreateListForm } from "./create-list-form";
 import { ListColumn } from "./list-column";
 
-const getCardDropTarget = (over: DragEndEvent["over"]) => {
+const getCardDropTarget = (
+  over: DragOverEvent["over"] | DragEndEvent["over"],
+) => {
   if (!over) {
     return null;
   }
@@ -64,6 +67,15 @@ const getCardDropTarget = (over: DragEndEvent["over"]) => {
   return null;
 };
 
+const getPreviewGapIndex = (cardIds: string[], overCardId?: string) => {
+  if (!overCardId) {
+    return cardIds.length;
+  }
+
+  const index = cardIds.indexOf(overCardId);
+  return index === -1 ? cardIds.length : index;
+};
+
 export const BoardPage = () => {
   const {
     board,
@@ -85,7 +97,11 @@ export const BoardPage = () => {
     null,
   );
   const [activeDragCardId, setActiveDragCardId] = useState<string | null>(null);
-  const activeCardListIdRef = useRef<string | null>(null);
+  const [cardDragPreview, setCardDragPreview] = useState<{
+    toListId: string;
+    overCardId?: string;
+  } | null>(null);
+  const activeCardSourceListIdRef = useRef<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -113,20 +129,42 @@ export const BoardPage = () => {
     const activeType = active.data.current?.type as string | undefined;
 
     if (activeType === "card") {
-      const listId = String(active.data.current?.listId ?? "");
-      activeCardListIdRef.current = listId || null;
       setActiveDragCardId(String(active.id));
+      const sourceListId = String(active.data.current?.listId ?? "");
+      activeCardSourceListIdRef.current = sourceListId || null;
       return;
     }
 
     setActiveDragCardId(null);
-    activeCardListIdRef.current = null;
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
+  };
+
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if (!activeDragCardId || String(active.id) !== activeDragCardId) {
+      return;
+    }
+
+    const target = getCardDropTarget(over);
+    setCardDragPreview((previous) => {
+      if (!target) {
+        return previous ? null : previous;
+      }
+      if (
+        previous?.toListId === target.toListId &&
+        previous.overCardId === target.overCardId
+      ) {
+        return previous;
+      }
+      return target;
+    });
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) {
       setActiveDragCardId(null);
-      activeCardListIdRef.current = null;
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
@@ -138,40 +176,47 @@ export const BoardPage = () => {
         reorderLists(String(active.id), String(over.id));
       }
       setActiveDragCardId(null);
-      activeCardListIdRef.current = null;
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    if (activeType !== "card") {
+    const draggedCardId = activeDragCardId ?? String(active.id ?? "");
+    if (!draggedCardId) {
       setActiveDragCardId(null);
-      activeCardListIdRef.current = null;
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    const cardId = String(active.id);
     const fromListId =
-      activeCardListIdRef.current ?? String(active.data.current?.listId ?? "");
+      activeCardSourceListIdRef.current ??
+      String(active.data.current?.listId ?? "");
     if (!fromListId) {
       setActiveDragCardId(null);
-      activeCardListIdRef.current = null;
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
     const target = getCardDropTarget(over);
     if (!target || !target.toListId) {
       setActiveDragCardId(null);
-      activeCardListIdRef.current = null;
+      setCardDragPreview(null);
+      activeCardSourceListIdRef.current = null;
       return;
     }
 
-    moveCard(cardId, fromListId, target.toListId, target.overCardId);
+    moveCard(draggedCardId, fromListId, target.toListId, target.overCardId);
     setActiveDragCardId(null);
-    activeCardListIdRef.current = null;
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
   };
 
   const handleDragCancel = (_event: DragCancelEvent) => {
     setActiveDragCardId(null);
-    activeCardListIdRef.current = null;
+    setCardDragPreview(null);
+    activeCardSourceListIdRef.current = null;
   };
 
   if (!isHydrated) {
@@ -185,6 +230,7 @@ export const BoardPage = () => {
       <DndContext
         collisionDetection={closestCorners}
         onDragCancel={handleDragCancel}
+        onDragOver={handleDragOver}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         sensors={sensors}
@@ -194,20 +240,36 @@ export const BoardPage = () => {
           strategy={horizontalListSortingStrategy}
         >
           <section className={styles.listsLane}>
-            {lists.map((list) => (
-              <ListColumn
-                cards={list.cardIds
-                  .map((cardId) => cardsById[cardId])
-                  .filter(Boolean)}
-                key={list.id}
-                list={list}
-                onAddCard={addCard}
-                onOpenComments={setActiveCommentCardId}
-                onRemove={removeList}
-                onUpdateCardTitle={updateCardTitle}
-                onUpdateTitle={updateListTitle}
-              />
-            ))}
+            {lists.map((list) => {
+              const sortableCardIds = activeDragCardId
+                ? list.cardIds.filter((cardId) => cardId !== activeDragCardId)
+                : list.cardIds;
+
+              const previewGapIndex =
+                cardDragPreview?.toListId === list.id
+                  ? getPreviewGapIndex(
+                      sortableCardIds,
+                      cardDragPreview.overCardId,
+                    )
+                  : undefined;
+
+              return (
+                <ListColumn
+                  cards={sortableCardIds
+                    .map((cardId) => cardsById[cardId])
+                    .filter(Boolean)}
+                  key={list.id}
+                  list={list}
+                  onAddCard={addCard}
+                  onOpenComments={setActiveCommentCardId}
+                  onRemove={removeList}
+                  onUpdateCardTitle={updateCardTitle}
+                  onUpdateTitle={updateListTitle}
+                  previewGapIndex={previewGapIndex}
+                  sortableCardIds={sortableCardIds}
+                />
+              );
+            })}
             <div className={styles.addList}>
               <CreateListForm onCreate={addList} />
             </div>
