@@ -1,0 +1,67 @@
+@use "../../../styles/mixins" as *;
+@use "../../../styles/variables" as *;
+
+.preview {
+  @include button-reset;
+
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: inherit;
+  text-align: left;
+  border-radius: 0.25rem;
+  padding: 0.2rem 0.35rem;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(9, 30, 66, 0.13);
+  }
+}
+
+.previewIcon {
+  font-size: 0.7rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+}
+
+.editor {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.input {
+  @include input-base;
+
+  padding: 0.3rem 0.45rem;
+  color: $text-primary;
+  background-color: $card-background;
+}
+
+.actionSave,
+.actionCancel {
+  @include button-reset;
+
+  border-radius: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.75rem;
+  text-transform: lowercase;
+}
+
+.actionSave {
+  background-color: $success;
+  color: $text-on-dark;
+
+  &:hover {
+    background-color: $success-hover;
+  }
+}
+
+.actionCancel {
+  background-color: rgba(9, 30, 66, 0.12);
+  color: $text-primary;
+
+  &:hover {
+    background-color: rgba(9, 30, 66, 0.2);
+  }
+}

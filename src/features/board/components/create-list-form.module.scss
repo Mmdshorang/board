@@ -1,0 +1,71 @@
+@use "../../../styles/mixins" as *;
+@use "../../../styles/variables" as *;
+
+.addTrigger {
+  @include button-reset;
+
+  width: 100%;
+  border-radius: 0.2rem;
+  padding: 0.8rem;
+  background-color: rgba(255, 255, 255, 0.24);
+  color: $text-on-dark;
+  text-align: left;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.32);
+  }
+}
+
+.form {
+  width: 100%;
+  border-radius: 0.2rem;
+  background-color: $list-background;
+  padding: 0.5rem;
+  box-shadow: $shadow-soft;
+}
+
+.input {
+  @include input-base;
+
+  padding: 0.5rem;
+  background-color: $card-background;
+  margin-bottom: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.submit,
+.cancel {
+  @include button-reset;
+
+  border-radius: 0.2rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+.submit {
+  background-color: $success;
+  color: $text-on-dark;
+
+  &:hover {
+    background-color: $success-hover;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+
+.cancel {
+  color: $text-secondary;
+
+  &:hover {
+    color: $text-primary;
+  }
+}

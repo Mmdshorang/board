@@ -1,0 +1,66 @@
+@use "../../../styles/mixins" as *;
+@use "../../../styles/variables" as *;
+
+.wrapper {
+  list-style: none;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+
+  &:not(:last-child) {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.card {
+  border-radius: 0.2rem;
+  padding: 0.5rem;
+  background-color: $card-background;
+  box-shadow: $shadow-soft;
+  cursor: grab;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  backface-visibility: hidden;
+  will-change: transform;
+
+  &:hover {
+    background-color: $surface-muted;
+  }
+
+  &[data-dragging="true"] {
+    transform: rotate(2deg);
+  }
+}
+
+.titlePreview {
+  width: 100%;
+  color: #40424b;
+  font-size: 0.875rem;
+
+  span {
+    word-break: break-word;
+    white-space: normal;
+  }
+}
+
+.titleInput {
+  font-size: 0.875rem;
+}
+
+.footer {
+  margin-top: 0.55rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.comments {
+  @include button-reset;
+
+  border-radius: 0.2rem;
+  padding: 0.3rem 0.6rem;
+  background-color: $surface-soft;
+  color: $text-primary;
+  font-size: 0.75rem;
+
+  &:hover {
+    background-color: $surface-border;
+  }
+}

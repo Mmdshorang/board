@@ -1,0 +1,94 @@
+@use "../../../styles/mixins" as *;
+@use "../../../styles/variables" as *;
+
+.column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 16rem;
+  max-height: calc(100vh - 5.2rem);
+  border-radius: 0.2rem;
+  background-color: $list-background;
+  margin-inline: 0.4rem;
+  box-shadow: $shadow-soft;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
+
+  &[data-dragging="true"] {
+    opacity: 0.9;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.45rem 0.4rem;
+}
+
+.dragHandle {
+  @include button-reset;
+
+  border-radius: 0.2rem;
+  padding: 0.3rem 0.25rem;
+  color: $text-secondary;
+  line-height: 1;
+
+  &:hover {
+    color: $text-primary;
+    background-color: rgba(9, 30, 66, 0.13);
+  }
+}
+
+.titlePreview {
+  flex: 1;
+  color: #172b4d;
+  font-size: 1rem;
+  font-weight: 600;
+
+  span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.titleInput {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.delete {
+  @include button-reset;
+
+  border-radius: 0.2rem;
+  padding: 0.2rem 0.35rem;
+  color: $text-secondary;
+  font-size: 0.8rem;
+
+  &:hover {
+    color: $text-on-dark;
+    background-color: $danger;
+  }
+}
+
+.cards {
+  @include custom-scrollbar;
+
+  min-height: 2rem;
+  padding: 0.5rem;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  transition: background-color 0.15s ease;
+
+  &[data-over="true"] {
+    background-color: rgba(9, 30, 66, 0.1);
+  }
+}
+
+.addCard {
+  padding: 0.3rem 0.35rem 0.55rem;
+}
