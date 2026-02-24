@@ -5,7 +5,7 @@ import {
   DndContext,
   type DragCancelEvent,
   type DragEndEvent,
-  type DragOverEvent,
+  DragOverlay,
   type DragStartEvent,
   PointerSensor,
   useSensor,
@@ -25,9 +25,7 @@ import { CommentsModal } from "./comments-modal";
 import { CreateListForm } from "./create-list-form";
 import { ListColumn } from "./list-column";
 
-const getCardDropTarget = (
-  over: DragOverEvent["over"] | DragEndEvent["over"],
-) => {
+const getCardDropTarget = (over: DragEndEvent["over"]) => {
   if (!over) {
     return null;
   }
@@ -86,6 +84,7 @@ export const BoardPage = () => {
   const [activeCommentCardId, setActiveCommentCardId] = useState<string | null>(
     null,
   );
+  const [activeDragCardId, setActiveDragCardId] = useState<string | null>(null);
   const activeCardListIdRef = useRef<string | null>(null);
 
   const sensors = useSensors(
@@ -103,50 +102,30 @@ export const BoardPage = () => {
     return cardsById[activeCommentCardId] ?? null;
   }, [activeCommentCardId, cardsById]);
 
+  const activeDragCard = useMemo(() => {
+    if (!activeDragCardId) {
+      return null;
+    }
+    return cardsById[activeDragCardId] ?? null;
+  }, [activeDragCardId, cardsById]);
+
   const handleDragStart = ({ active }: DragStartEvent) => {
     const activeType = active.data.current?.type as string | undefined;
 
     if (activeType === "card") {
       const listId = String(active.data.current?.listId ?? "");
       activeCardListIdRef.current = listId || null;
+      setActiveDragCardId(String(active.id));
       return;
     }
 
+    setActiveDragCardId(null);
     activeCardListIdRef.current = null;
-  };
-
-  const handleDragOver = ({ active, over }: DragOverEvent) => {
-    if (!over) {
-      return;
-    }
-
-    const activeType = active.data.current?.type as string | undefined;
-    if (activeType !== "card") {
-      return;
-    }
-
-    const cardId = String(active.id);
-    const fromListId =
-      activeCardListIdRef.current ?? String(active.data.current?.listId ?? "");
-    if (!fromListId) {
-      return;
-    }
-
-    const target = getCardDropTarget(over);
-    if (!target || !target.toListId) {
-      return;
-    }
-
-    if (target.toListId === fromListId) {
-      return;
-    }
-
-    moveCard(cardId, fromListId, target.toListId, target.overCardId);
-    activeCardListIdRef.current = target.toListId;
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) {
+      setActiveDragCardId(null);
       activeCardListIdRef.current = null;
       return;
     }
@@ -158,11 +137,13 @@ export const BoardPage = () => {
       if (active.id !== over.id) {
         reorderLists(String(active.id), String(over.id));
       }
+      setActiveDragCardId(null);
       activeCardListIdRef.current = null;
       return;
     }
 
     if (activeType !== "card") {
+      setActiveDragCardId(null);
       activeCardListIdRef.current = null;
       return;
     }
@@ -171,21 +152,25 @@ export const BoardPage = () => {
     const fromListId =
       activeCardListIdRef.current ?? String(active.data.current?.listId ?? "");
     if (!fromListId) {
+      setActiveDragCardId(null);
       activeCardListIdRef.current = null;
       return;
     }
 
     const target = getCardDropTarget(over);
     if (!target || !target.toListId) {
+      setActiveDragCardId(null);
       activeCardListIdRef.current = null;
       return;
     }
 
     moveCard(cardId, fromListId, target.toListId, target.overCardId);
+    setActiveDragCardId(null);
     activeCardListIdRef.current = null;
   };
 
   const handleDragCancel = (_event: DragCancelEvent) => {
+    setActiveDragCardId(null);
     activeCardListIdRef.current = null;
   };
 
@@ -200,7 +185,6 @@ export const BoardPage = () => {
       <DndContext
         collisionDetection={closestCorners}
         onDragCancel={handleDragCancel}
-        onDragOver={handleDragOver}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         sensors={sensors}
@@ -229,6 +213,16 @@ export const BoardPage = () => {
             </div>
           </section>
         </SortableContext>
+        <DragOverlay>
+          {activeDragCard ? (
+            <article className={styles.cardOverlay}>
+              <p className={styles.cardOverlayTitle}>{activeDragCard.title}</p>
+              <p className={styles.cardOverlayMeta}>
+                Comments ({activeDragCard.comments.length})
+              </p>
+            </article>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <CommentsModal
