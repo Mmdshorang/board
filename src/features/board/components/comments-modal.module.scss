@@ -1,0 +1,128 @@
+@use "../../../styles/mixins" as *;
+@use "../../../styles/variables" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $overlay;
+  z-index: 999;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  background-color: $card-background;
+  border-radius: 0.3rem;
+  box-shadow: $shadow-modal;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.title {
+  font-size: 1rem;
+  color: $text-primary;
+}
+
+.close {
+  @include button-reset;
+
+  font-size: 1.1rem;
+  line-height: 1;
+  color: $text-secondary;
+  border-radius: 0.2rem;
+  padding: 0.2rem;
+
+  &:hover {
+    color: $text-primary;
+    background-color: $surface-muted;
+  }
+}
+
+.list {
+  @include custom-scrollbar;
+
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.item {
+  list-style: none;
+  background-color: $surface-muted;
+  border-radius: 0.2rem;
+  padding: 0.5rem;
+
+  &:not(:last-child) {
+    margin-bottom: 0.45rem;
+  }
+}
+
+.empty {
+  list-style: none;
+  font-size: 0.85rem;
+  color: $text-secondary;
+  padding: 0.5rem;
+}
+
+.meta {
+  margin-bottom: 0.3rem;
+  color: $text-secondary;
+  font-size: 0.72rem;
+}
+
+.message {
+  font-size: 0.85rem;
+  color: #40424b;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.form {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.input {
+  @include input-base;
+
+  resize: vertical;
+  min-height: 60px;
+  border: 1px solid $list-background;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.submit {
+  @include button-reset;
+
+  align-self: flex-end;
+  border-radius: 0.2rem;
+  padding: 0.45rem 0.85rem;
+  background-color: $success;
+  color: $text-on-dark;
+  font-size: 0.82rem;
+
+  &:hover {
+    background-color: $success-hover;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
